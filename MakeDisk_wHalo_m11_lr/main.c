@@ -6,8 +6,8 @@
 #include "globvars.h"
 #include "prototypes.h"
 
-#define RES_FACTOR 4 /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
-#define f_gas 0.5 /* should equal gas fraction in disk  */
+#define RES_FACTOR 80 /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
+#define f_gas 0.2    /* should equal gas fraction in disk  */
 
 int main(int argc,char *argv[])
 {
@@ -18,30 +18,28 @@ int main(int argc,char *argv[])
 
   /*******************************************/
 
-  VC			=     200;                          /* for analytic isothermal profile */
-  CC                    =      10.;                         /* halo concentration      */
-  Mvir                  =      100;              	    /* virial mass (in 10^10 Msolar)   coloser to 1*/
-  LAMBDA                =    0.033;       		    /* spin parameter          */
-  M_HALO                =     84;		            /* total dark mass in units of 10^10 Msolar */
-  M_DISK                =     1;   		            /* total disk mass in units of 10^10 Msolar */
-  M_GAS                 =     M_DISK*f_gas;   		            /* total gas mass in units of 10^10 Msolar */
-  M_GASHALO             =     2.48;              	    /* total gas halo mass in units of 10^10 Msolar */
+  VC		        =     150;                           /* for analytic isothermal profile */
+  CC                    =      10.;                          /* not used */
+  Mvir                  =      100;              	    /* not used */
+  LAMBDA                =    0.033;       		    /* not used          */
+  M_HALO                =     84;		            /* not used */
+  M_DISK                =     1;   		            /* total disk stellar mass in units of 10^10 Msolar */
+  M_GAS                 =     M_DISK*f_gas;   		    /* total disk gas mass in units of 10^10 Msolar */
+  M_GASHALO             =     2.48;              	    /* not used */
   M_BULGE               =     0.02;   		            /* total bulge mass in units of 10^10 Msolar */
   M_BH                  =     0.0002;			    /* seed BH mass in units of 10^10 Msolar */
 
-  DARKMASS_IN_ROPT      =    -10.0;	                    /* dark mass inside optical radius (3.2 * H)  */
-  							    /* (if negative, then DM will not be adiabatically contracted, */
-  							    /*   profile left as default NFW with Rvir(Mhalo) */
-  H                     =      0.25;             	    /* manually set radial disk scale length, this decouples
+  DARKMASS_IN_ROPT      =    -10.0;	                    /* not used  */
+  H                     =      2.5;              	    /* manually set radial disk scale length, this decouples
                            		                       the angular momentum of the disk and the halo and hence
                            		                       the spin doesn't set the size of H and Jd is not
                            		                       fixed.   */
   DiskHeight            =      0.1;    	                    /* thickness of disk in units of radial scale length */
-  N_HALO                =  0;     //use analytic gravity                    /* desired number of particles in dark halo */
-  N_DISK                =   125000*RES_FACTOR;     //8e4 for RES_FACTOR=1  /* desired number of collisionless particles in disk */
-  N_GAS                 =   N_DISK*f_gas;     //8e4 for RES_FACTOR=1   /* number of gas particles in disk */
-  N_BULGE               =   25000*RES_FACTOR;    //8e4  for RES_FACTOR=1   /* number of bulge particles */
-  N_GASHALO             =  0;     //added later                    /* number of gas halo particles */
+  N_HALO                =        0;                          /* should be 0, analytic gravity is used instead */
+  N_DISK                =   125000*RES_FACTOR;               /* desired number of collisionless particles in disk, 8e4 for RES_FACTOR=1 */
+  N_GAS                 =   N_DISK*f_gas;                    /* number of gas particles in disk, 8e4 for RES_FACTOR=1 */
+  N_BULGE               =     2500*RES_FACTOR;                /* number of bulge particles, 8e4  for RES_FACTOR=1  */
+  N_GASHALO             =        0;                          /* should be 0, added later */
   HUBBLE                =        1;			    /* Hubble parameter (1 means units of h-1)*/
   Z                     =        0;		   	    /* Redshift of Galaxy */
   GasDistribution       =        0;			    /* 0 = exp. (normal, same Rd as disk)
@@ -49,7 +47,7 @@ int main(int argc,char *argv[])
 				   			       2 = Power Law (with PowerLawGamma < 2) 
 				   			       3 = exp. (with Rd -> Rd*Alpha) 
 				   				         with cutoff inside HoleRadius */
-  GasExpAlpha           =      2.0;                         /* gas is exp. with Rd*Alpha scale length */
+  GasExpAlpha           =      2.0;                          /* gas is exp. with Rd*Alpha scale length */
   PowerLawGamma         =        1;               	    /* power-law index, sigma ~ r^-gamma   (gamma=1 is mestel) - must be < 2 */
   PowerLawCutOff        =        4;			    /* in units of Rd, when gas disk is terminated */
   HoleRadius            =     0.03;			    /* in units of Rd, when inner gas disk is cut off */
@@ -57,7 +55,7 @@ int main(int argc,char *argv[])
   SetInitModeAmp        =      0.0;  	  	            /* amplitude (fractional) of 'seed' mode M in initial gas */
   SetInitModeCut        =      0.0;   		            /* cutoff radius (absolute) of 'seed' mode M in initial gas */
   SetInitModeM          =        1;			    /* modenumber m for 'seed' mode in initial gas */
-  BulgeSize             =      0.05*2;    		            /* bulge scale length in ABSOLUTE UNITS (*NOT* units of R_d) */
+  BulgeSize             =   0.05*2;     	            /* bulge scale length in ABSOLUTE UNITS (*NOT* units of R_d) */
   BulgeDistribution     =        0;    	                    /* 0 = Hernquist profile (BulgeSize sets a)
                                 	                       1 = Spherical exp. (BulgeSize sets 3D Rd) */
   GasHalo_Rc_over_Rs    =        1;                         /* 0.5, ratio of gas halo core to halo scale radius */
