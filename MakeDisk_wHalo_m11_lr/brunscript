@@ -1,0 +1,16 @@
+#!/bin/sh
+#BSUB -q sunrise
+#BSUB -J mdsk_sr
+#BSUB -n 1
+#BSUB -o mdsk_sr.out
+#BSUB -e mdsk_sr.err
+#BSUB -u phopkins@cfa.harvard.edu
+#BSUB -N
+
+fname=S0_hr
+dir=/n/hernquistfs1/phopkins/sbw_tests/sim_ICs/
+
+cp MakeHubbleType $dir
+cd $dir
+./MakeHubbleType $fname.dat > $fname.out
+
