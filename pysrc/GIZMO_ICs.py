@@ -28,10 +28,11 @@ def mifkad(arr):
 
     
 class ICs:
-    init_base_filename = outdir+'init.c_base'
-    analytic_gravity_base_filename = outdir+'analytic_gravity.h_base'
+    outdir_base = '../GIZMO_ICs/'
+    init_base_filename = outdir_base+'init.c_base'
+    analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
     fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s.ic'
-    outdir_template = '../GIZMO_ICs/vc%d_Rs%d_Mdot%d_Rcirc%d_%s'
+    outdir_template = outdir_base + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
     R_min    = 0.3*un.kpc             #inner radius of supersonic part of solution
@@ -63,8 +64,7 @@ class ICs:
             self.cooling = Cool.Wiersma_Cooling(self.Z_CGM,self.z_cooling)
             self.smallGalaxy = smallGalaxy
             self.resolution = resolution
-            if fgas == None: self.fgas_str == '' #for compatibility for old runs where fgas=0.2
-            else: self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
+            self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
                  
     def calc_CF_solution(self,tol=1e-6,pr=True):
         self.CF_solution = CF.shoot_from_sonic_point(self.potential,
@@ -73,20 +73,22 @@ class ICs:
                                         self.R_max,self.R_min,max_step=self.max_step,tol=tol,
                                         pr=pr)
     def sample(self,Rres2Rcool=1):
-        return CF.sample(self.CF_solution,self.resolution,self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=Rres2Rcool)
+        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=Rres2Rcool)
     def outdirname(self):
+        res_str = '%.1g'%self.resolution.value
+        res_str = res_str[:2]+res_str[-1:]
         return self.outdir_template%(self.vc.value,
                                     self.Rsonic.value,
                                     self.CF_solution.Mdot.value*1000,
                                     self.Rcirc.value,
-                                    self.fgas_str)
+                                    self.fgas_str,
+                                    res_str)
     def makedisk_filename(self):
-        if self.resolution.value==2e4: res_str = '_res2e4'
-        elif self.resolution.value==1e3: res_str = '_res1e3'
-        else: res_str = ''
+        res_str = '%.1g'%self.resolution.value
+        res_str = res_str[:2]+res_str[-1:]
         return self.fn_diskOnly%(self.vc.value,
                                  ('','_small_galaxy')[self.smallGalaxy],
-                                 res_str,
+                                 '_res'+res_str,
                                  self.fgas_str)
         
         
