@@ -6,7 +6,7 @@
 #include "globvars.h"
 #include "prototypes.h"
 
-#define RES_FACTOR 80 /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
+#define RES_FACTOR 40 /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
 #define f_gas 0.2    /* should equal gas fraction in disk  */
 
 int main(int argc,char *argv[])

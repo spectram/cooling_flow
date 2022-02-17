@@ -32,7 +32,8 @@ class ICs:
     init_base_filename = outdir_base+'init.c_base'
     analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
     fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s.ic'
-    outdir_template = outdir_base + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
+    outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
+    outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
     R_min    = 0.3*un.kpc             #inner radius of supersonic part of solution
