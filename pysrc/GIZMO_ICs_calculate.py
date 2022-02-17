@@ -13,7 +13,7 @@ vc = 150*un.km/un.s
 Rsonics = np.array([0.3,0.00003])[:]*un.kpc
 Z = 0.3
 Rcirc = 10*un.kpc
-resolution = 2e3*un.Msun
+resolution = 2e3*un.Msun #2e4
 instances = [None]*len(Rsonics)
 for fgas in (0.2,0.3,0.4,0.5)[:1]:
     for i,Rsonic in enumerate(Rsonics):
