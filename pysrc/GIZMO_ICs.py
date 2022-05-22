@@ -7,6 +7,11 @@ import HaloPotential as Halo
 import WiersmaCooling as Cool
 import gsr
 
+if os.getenv('HOME')=='/home/jonathan':
+    outdir_data = '/home/jonathan/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
+else:
+    outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
+
 keys_dict = {'pos':'Coordinates', 
              'vel':'Velocities',
              'ids':'IDs',
@@ -32,7 +37,6 @@ class ICs:
     init_base_filename = outdir_base+'init.c_base'
     analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
     fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s.ic'
-    outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
     outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
@@ -42,7 +46,7 @@ class ICs:
     # these params should be the same as in MakeDisk/main.c
     DiscScale = 2.5*un.kpc
     DiscHeight = 0.2*un.kpc
-    
+    Z_disk = 1
     
     def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None):
         if ics!=None: #copy constructor for changing only Rcirc
@@ -123,11 +127,11 @@ class ICs:
                         if k=="energies":
                             data   = np.concatenate([data,gas_internalEnergies.value])       
                         if k=="mass":                    
-                            #Zs = np.concatenate([np.ones((len(data),      11))*self.Z_disk,
-                                                 #np.ones((len(gas_masses),11))*self.Z_CGM],axis=0) * Zsun
+                            Zs = np.concatenate([np.ones((len(data),      11))*self.Z_disk,
+                                                 np.ones((len(gas_masses),11))*self.Z_CGM],axis=0) * Zsun
                             data   = np.concatenate([data,gas_masses.value/MASS_UNITS])                    
-                            #grp.create_dataset('Metallicity', Zs.shape, dtype=Zs.dtype)
-                            #grp['Metallicity'][:] = Zs                      
+                            grp.create_dataset('Metallicity', Zs.shape, dtype=Zs.dtype)
+                            grp['Metallicity'][:] = Zs                      
                             #print(['%.2g %d'%item for item in mifkad(Zs[:,0]).items()])
                             #print(['%.2g %d'%item for item in mifkad(data).items()])
                             
@@ -137,10 +141,10 @@ class ICs:
                         if data.shape[0]!=0:
                             unique_masses = ['%.2g'%x for x in np.unique(data)*1e10]
                             print('Ms: %s%s'%(' '.join(unique_masses[:3]),('... %s'%unique_masses[-1],'')[len(unique_masses)<=3]))
-                        #if iPartType in (2,3):      
-                            #Zs = np.ones((len(data),11))*self.Z_disk * Zsun                     
-                            #grp.create_dataset('Metallicity', Zs.shape, dtype=Zs.dtype)
-                            #grp['Metallicity'][:] = Zs
+                        if iPartType in (2,3):      
+                            Zs = np.ones((len(data),11))*self.Z_disk * Zsun                     
+                            grp.create_dataset('Metallicity', Zs.shape, dtype=Zs.dtype)
+                            grp['Metallicity'][:] = Zs
                         
                     if k=='pos': 
                         if data.shape[0]!=0:

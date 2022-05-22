@@ -70,6 +70,31 @@ class Wiersma_Cooling(CF.Cooling):
 
 
 
+class Kartick_Cooling(CF.Cooling):
+    table_path = '../cooling/Kartick_CIE_cooling.table'
+    def __init__(self):
+        table = np.genfromtxt(self.table_path)
+        self.Tbins = table[:,0]
+        self.LAMBDAs = table[:,1] * table[:,2] #LAMBDA times n_e in the table        
+        #### calculate gradient of cooling function
+        dlogT = np.diff(log(self.Tbins))
+        vals = log(self.LAMBDA(self.Tbins*un.K).value)
+        self.LAMBDA_gradient_Tbins = (log(self.Tbins[1:])+log(self.Tbins[:-1]))/2
+        self.LAMBDA_gradient = np.diff(vals)/dlogT
+    def LAMBDA(self, T, nH=None):
+        """cooling function"""
+        return 10.**np.interp(log(T.to('K').value),log(self.Tbins),log(self.LAMBDAs)) * un.erg*un.cm**3/un.s
+    def f_dlnLambda_dlnT(self, T, nH=None):         
+        """logarithmic derivative of cooling function with respect to T"""
+        return np.interp(log(T.to('K').value),self.LAMBDA_gradient_Tbins,self.LAMBDA_gradient)
+    def f_dlnLambda_dlnrho(self, T, nH):
+        """logarithmic derivative of cooling function with respect to rho"""
+        return 0.
+    
+
+
+        
+        
 def searchsortedclosest(arr, val):
     if arr[0]<arr[1]:
         ind = np.searchsorted(arr,val)

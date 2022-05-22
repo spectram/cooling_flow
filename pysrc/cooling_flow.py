@@ -448,13 +448,14 @@ class IntegrationResult:
     
 
 
-def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.):
+def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None):
     """sample solution in order to create initial conditions for particle hydro simulation"""
     Mgass = self.Mgas()
     rs = self.Rs()
     Rin, Rout = 0*un.kpc, self.Rcool(10*un.Gyr)*Rres2Rcool        
     Rmax = np.interp(20, (self.Rs() / self.cs()).to('Gyr').value,self.Rs().value)*un.kpc
     print(" %dr(t_cool=10Gyr) = %.0f kpc, r(t_sc=20Gyr) = %.0f kpc"%(Rres2Rcool,Rout.value, Rmax.value))
+    if theta_function==None: theta_function = lambda theta: np.sin(theta)
     while Rin<Rmax:            
         Min = np.interp(Rin,rs, Mgass)
         Mout = np.interp(Rout,rs, Mgass)
@@ -485,8 +486,8 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.):
         sampled_epsilons     = np.interp(sampled_rs, rs, self.internalEnergy())
         
         vcRcirc = np.interp(Rcirc, self.Rs(), self.vc2())**0.5
-        sampled_vphis = ( (vcRcirc * (Rcirc / sampled_Rcylinders))                * (sampled_Rcylinders > Rcirc) + 
-                          np.interp(sampled_rs,self.Rs(),self.vc2())**0.5         * (sampled_Rcylinders < Rcirc) )
+        sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
+                          np.interp(sampled_rs,self.Rs(),self.vc2())**0.5        * (sampled_rs < Rcirc) )
         #assumes v_theta=0
         sampled_vxs = sampled_vrs * np.sin(sampled_thetas)*np.cos(sampled_phis) - sampled_vphis * np.sin(sampled_phis)
         sampled_vys = sampled_vrs * np.sin(sampled_thetas)*np.sin(sampled_phis) + sampled_vphis * np.cos(sampled_phis)
