@@ -131,6 +131,197 @@ def IntegrateFlowEquations(Mdot,T0,rho0,potential,cooling,isInward,R_min,R_max,R
                                     max_step=max_step,atol=atol,rtol=rtol)
 
     return IntegrationResult(res, Mdot, potential=potential,cooling=cooling,isInward=isInward)
+def IntegrateFlowEquations(Mdot,T0,rho0,potential,cooling,isInward,R_min,R_max,R_circ=None,max_step=0.1,
+                           atol=1e-6,rtol=1e-6,checkUnbound=True,issupersonic=False,terminalUnbound=True,minT=2e4):
+    
+    """
+    Function for integrating steady-state flow equations. Called by shoot_from_R_circ() and shoot_from_sonic_point()    
+    Accepts:
+    Mdot, T0, rho0: hydrodynamic variables at initial radius (either R_min or R_max, depending on direction of integration)
+    potential: Potential object
+    cooling: Cooling object
+    isInward: direction of integration (outward for subsonic part, inward for supersonic part)
+    R_min, R_max: range of integration 
+    max_step: minimum resolution of solution in ln(r)
+    terminalUnbound, checkUnbound: if terminalUnbound=True, integration stops when Bernoulli>0. if checkUnbound==False, Bernoulli parameter is not calculated during integration
+    issupersonic: whether solution is supersonic or subsoni    
+    minT: integration stops when T drops below this value. 
+    atol,rtol: input for scipy.integrate.solve_ivp    
+    Returns:
+    IntegrationResult object
+    """
+    def odes(ln_R, y,Mdot=Mdot,potential=potential,cooling=cooling,isInward=isInward,R_circ=R_circ):
+        if isInward: R = e**-ln_R*un.kpc
+        else:        R = e**ln_R*un.kpc
+        ln_T,ln_rho = y
+        rho,T=e**ln_rho*un.g/un.cm**3, e**ln_T*un.K
+        nH = (X*rho/cons.m_p).to('cm**-3')
+
+        v = (Mdot/(4*pi*R**2*rho)).to('km/s')
+        cs2 = (gamma*cons.k_B * T / (mu*cons.m_p)).to('km**2/s**2')
+        M = (v/cs2**0.5).to('')
+
+        vc2 = potential.vc(R)**2
+        if R_circ!=None:
+            vc2 *= (1-(R_circ/R)**2)
+        v_ratio = (vc2/cs2).to('')
+
+        t_flow = (R/v).to('Gyr')
+        LAMBDA = cooling.LAMBDA(T,nH)
+        t_cool = (rho*cs2 / (nH**2*LAMBDA) / (gamma*(gamma-1))).to('Gyr')
+        t_ratio = (t_flow/t_cool).to('')
+
+        dln_rho2dln_R =  (-t_ratio/gamma - v_ratio + 2*M**2)  / (1-M**2)
+        dln_T2dln_R = t_ratio + dln_rho2dln_R*(gamma-1)
+
+        if isInward: return -dln_T2dln_R, -dln_rho2dln_R
+        else: return dln_T2dln_R, dln_rho2dln_R
+
+    def sonic_point(ln_R, y,Mdot=Mdot,isInward=isInward,issupersonic=issupersonic): 
+        if isInward: R = e**-ln_R*un.kpc
+        else: R = e**ln_R*un.kpc        
+        ln_T,ln_rho = y
+        rho, T = e**ln_rho*un.g/un.cm**3, e**ln_T*un.K
+        v = Mdot/(4*pi*R**2*rho)        
+        cs2 = gamma*cons.k_B * T / (mu*cons.m_p)
+        M = (v/cs2**0.5).to('')
+        return M - 1
+    def lowT(ln_R, y, minT=minT):
+        ln_T,ln_rho = y
+        T=e**ln_T*un.K
+        return T.to('K').value-minT
+    def unbound(ln_R, y,potential=potential,Mdot=Mdot,isInward=isInward,R_max=R_max): 
+        if isInward: R = e**-ln_R*un.kpc
+        else: R = e**ln_R*un.kpc    
+        ln_T,ln_rho = y
+        rho, T = e**ln_rho*un.g/un.cm**3, e**ln_T*un.K
+        v = (Mdot/(4*pi*R**2*rho)).to('km/s').value
+        cs2 = (gamma*cons.k_B * T / (mu*cons.m_p)).to('km**2/s**2').value
+        B = 0.5*v**2 + cs2/(gamma-1) + potential.Phi(R).to('km**2/s**2').value
+        return B
+    def dummy(ln_R,y):
+        return 1.
+    sonic_point.terminal = True
+    lowT.terminal = True
+    unbound.terminal = terminalUnbound
+    events = sonic_point,(dummy,unbound)[checkUnbound],(lowT,dummy)[issupersonic]
+
+    if isInward: 
+        Rrange =  R_max, R_min
+        lnRrange = -ln(R_max.value),-ln(R_min.value)
+    else:        
+        Rrange =  R_min, R_max
+        lnRrange = ln(R_min.value), ln(R_max.value)
+
+    initVals = ln(T0/un.K), ln(rho0/(un.g*un.cm**-3))
+
+
+    if not issupersonic and sonic_point(lnRrange[0], initVals)>0: return 'starts supersonic'
+    if     issupersonic and sonic_point(lnRrange[0], initVals)<0: return 'starts subsonic'
+    if terminalUnbound and checkUnbound and unbound(lnRrange[0], initVals)>0: return 'starts unbound'
+
+    res = scipy.integrate.solve_ivp(odes,lnRrange,initVals,events=events,
+                                    max_step=max_step,atol=atol,rtol=rtol)
+
+    return IntegrationResult(res, Mdot, potential=potential,cooling=cooling,isInward=isInward)
+def Integrate2DFlowEquations(Mdot,T0,rho0,potential,cooling,isInward,R_min,R_max,R_circ=None,max_step=0.1,
+                           atol=1e-6,rtol=1e-6,checkUnbound=True,issupersonic=False,terminalUnbound=True,minT=2e4):
+    
+    """
+    Function for integrating steady-state flow equations. Called by shoot_from_R_circ() and shoot_from_sonic_point()    
+    Accepts:
+    Mdot, T0, rho0: hydrodynamic variables at initial radius (either R_min or R_max, depending on direction of integration)
+    potential: Potential object
+    cooling: Cooling object
+    isInward: direction of integration (outward for subsonic part, inward for supersonic part)
+    R_min, R_max: range of integration 
+    max_step: minimum resolution of solution in ln(r)
+    terminalUnbound, checkUnbound: if terminalUnbound=True, integration stops when Bernoulli>0. if checkUnbound==False, Bernoulli parameter is not calculated during integration
+    issupersonic: whether solution is supersonic or subsoni    
+    minT: integration stops when T drops below this value. 
+    atol,rtol: input for scipy.integrate.solve_ivp    
+    Returns:
+    IntegrationResult object
+    """
+    def odes(x, y,potential=potential,cooling=cooling,isInward=isInward,R_circ=R_circ):
+        if isInward: r = -x*un.kpc
+        else:        r = x*un.kpc
+        #vector R,z,vs,theta_s,P,rho        
+        R,z,vs,theta_s,P,rho = y #multiply by units
+        
+        r     = (R**2+z**2)**0.5
+        theta = np.arctan2(R, z)
+        vc = potential.vc(r)        
+        vphi  = vc * R_circ / R
+        Omega = vphi / R
+
+        nH = (X*rho/cons.m_p).to('cm**-3')
+        cs2 = (gamma*P/rho).to('km**2/s**2')
+        T = ((mu*cons.m_p*cs2) / (gamma*cons.k_B)).to('K')        
+        LAMBDA = cooling.LAMBDA(T,nH)
+        t_cool = (rho*cs2 / (nH**2*LAMBDA) / (gamma*(gamma-1))).to('Gyr')
+
+        dR_ds = np.sin(theta_s) #1
+        dz_ds = np.cos(theta_s) #2
+        dP_ds = -rho * vc**2/r*sin(theta_s) + rho*Omega**2*r*sin(theta)**2*sin(theta_s) + rho*Omega**2*r*sin(theta)*cos(theta)*cos(theta_s) #3
+        dlnrho_ds = 3/5. * ( dP_ds/P - (v_s*t_cool)**-1 ) #4
+        dtheta_s_ds = xx #can get this from s-derivative of dP/dvarpi eqn. and taking dP/ds of previous flowline. 
+        #However, this means applying only a 2nd-derivative constraint, and making the integration one-sided, in contrast with double-sided 
+        # methods applied in solve_ivp (e.g. RK4)
+        dlnvs_ds = -dlnrho_ds + cos(theta_s)*dtheta_s_ds -sin(theta_s)* dtheta_s_dvarpi
+        #again, dtheta_s_dvarpi is calculated one sided in this equation
+        
+        if isInward: return -vector
+        else: return vector
+
+    def sonic_point(ln_R, y,Mdot=Mdot,isInward=isInward,issupersonic=issupersonic): 
+        if isInward: R = e**-ln_R*un.kpc
+        else: R = e**ln_R*un.kpc        
+        ln_T,ln_rho = y
+        rho, T = e**ln_rho*un.g/un.cm**3, e**ln_T*un.K
+        v = Mdot/(4*pi*R**2*rho)        
+        cs2 = gamma*cons.k_B * T / (mu*cons.m_p)
+        M = (v/cs2**0.5).to('')
+        return M - 1
+    def lowT(ln_R, y, minT=minT):
+        ln_T,ln_rho = y
+        T=e**ln_T*un.K
+        return T.to('K').value-minT
+    def unbound(ln_R, y,potential=potential,Mdot=Mdot,isInward=isInward,R_max=R_max): 
+        if isInward: R = e**-ln_R*un.kpc
+        else: R = e**ln_R*un.kpc    
+        ln_T,ln_rho = y
+        rho, T = e**ln_rho*un.g/un.cm**3, e**ln_T*un.K
+        v = (Mdot/(4*pi*R**2*rho)).to('km/s').value
+        cs2 = (gamma*cons.k_B * T / (mu*cons.m_p)).to('km**2/s**2').value
+        B = 0.5*v**2 + cs2/(gamma-1) + potential.Phi(R).to('km**2/s**2').value
+        return B
+    def dummy(ln_R,y):
+        return 1.
+    sonic_point.terminal = True
+    lowT.terminal = True
+    unbound.terminal = terminalUnbound
+    events = sonic_point,(dummy,unbound)[checkUnbound],(lowT,dummy)[issupersonic]
+
+    if isInward: 
+        Rrange =  R_max, R_min
+        lnRrange = -ln(R_max.value),-ln(R_min.value)
+    else:        
+        Rrange =  R_min, R_max
+        lnRrange = ln(R_min.value), ln(R_max.value)
+
+    initVals = ln(T0/un.K), ln(rho0/(un.g*un.cm**-3))
+
+
+    if not issupersonic and sonic_point(lnRrange[0], initVals)>0: return 'starts supersonic'
+    if     issupersonic and sonic_point(lnRrange[0], initVals)<0: return 'starts subsonic'
+    if terminalUnbound and checkUnbound and unbound(lnRrange[0], initVals)>0: return 'starts unbound'
+
+    res = scipy.integrate.solve_ivp(odes,lnRrange,initVals,events=events,
+                                    max_step=max_step,atol=atol,rtol=rtol)
+
+    return IntegrationResult(res, Mdot, potential=potential,cooling=cooling,isInward=isInward)
+
 def calc_rho_from_tflow2tcool(v, tflow2tcool, T, R, cooling): 
     """
     Calculates rho for given v, t_flow/t_cool, T, R, and cooling function. Called by shoot_from_sonic_point.
@@ -222,6 +413,61 @@ def shoot_from_R_circ(potential,cooling,R_circ,Mdot,R_max,v0=1*un.km/un.s,
         return results    
     if res.stopReason()=='max R reached': return res
     print('no result reached maximum R, try rerunning with return_all_results=True and check intermediate solutions')
+
+def shoot_from_outer_boundary(potential,cooling,R_circ,Mdot,R_max,
+                    max_step=0.1,T_stop=1e4*un.K,
+                    epsilon=0.2,tol=1e-6,
+                    terminalUnbound=True,pr=False,return_all_results=False):
+    """
+    Find subsonic cooling flow solution starting at outer boundary. 
+    Accepts:
+    potential: Potential object
+    cooling: Cooling object
+    R_circ: circularization radius where gravitational and centripetal forces balance
+    epsilon: minimum radius of integration is R_circ(1+epsilon)
+    Mdot: mass inflow rate of solution
+    R_max: outer radius of integration
+    max_step: minimum resolution of solution in ln(r)
+    terminalUnbound: if terminalUnbound=True, integration stops when Bernoulli>0. 
+    a single IntegrationResult object 
+    """
+    M1 = Mdot/(1*un.Msun/un.yr)
+    Rmax10 = (R_max/(10*un.kpc))
+    vc = potential.vc(R_max)
+    Tinit = (mu * cons.m_p * vc**2 / (5/3*cons.k_B)).to('K')
+    Lambda = cooling.LAMBDA(Tinit,0.1*un.cm**-3)    
+    nH = ((9*Mdot/(40*np.pi*0.9*R_max**3*Lambda))**0.5 * vc).to('cm**-3')
+    rho0 = (nH*cons.m_p/X).to('g/cm**3')
+    T_high = Tinit*1.1
+    T_low = Tinit/1.1
+    results = {}
+    while log(T_high / T_low) > tol:
+        T0 = (T_high*T_low)**0.5    
+        res        = IntegrateFlowEquations(Mdot,T0,rho0,potential,cooling,isInward=True,
+                                            R_min=R_circ*(1+epsilon),
+                                            R_max=R_max,terminalUnbound=terminalUnbound,
+                                            issupersonic=False,
+                                            minT=T_stop.value,R_circ=R_circ,max_step=max_step)
+        results[T0.value] = res
+        if type(res)==type(''):
+            print(res)
+            break 
+        if pr: 
+            print('Integrated with log T(R_circ)=%.5f, minimum radius reached %d kpc, stop reason: %s'%(log(T0.to('K').value),res.Rs()[0].to('kpc').value,res.stopReason()))
+        if res.stopReason() in ('sonic point', 'lowT'):
+            T_low = T0
+        elif res.stopReason() == 'unbound':
+            T_high = T0
+        elif res.stopReason()=='max R reached':            
+            if res.Ms()[0]>0.03:
+                T_high = T0
+            else:
+                print('success')
+                break #stop adjusting T
+    if return_all_results:
+        return results    
+    if res.stopReason()=='max R reached': return res
+    print('no result reached minimum R, try rerunning with return_all_results=True and check intermediate solutions')
 
 
 def shoot_from_sonic_point(potential,cooling, R_sonic,R_max,R_min, tol=1e-6,max_step=0.1,

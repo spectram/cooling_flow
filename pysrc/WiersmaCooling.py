@@ -92,6 +92,32 @@ class Kartick_Cooling(CF.Cooling):
         return 0.
     
 
+class DopitaSutherland_CIE(CF.Cooling):
+    table_path = '../cooling/DopitaSutherland_CIE.dat'
+    def __init__(self,Z2Zsun):
+        table = np.genfromtxt(self.table_path)
+        self.Tbins = table[:,0]
+        if Z2Zsun==1:   self.LAMBDAs = table[:,1] 
+        if Z2Zsun==1/3.: self.LAMBDAs = table[:,2] 
+        ### convert to definition that n_H^2 Lambda is cooling per unit volume
+        n_i_to_n_H = 1.22**-1 / 0.7
+        n_e_to_n_H = 1.17**-1 / 0.7
+        self.LAMBDAs *= n_i_to_n_H * n_e_to_n_H
+        #### calculate gradient of cooling function
+        dlogT = np.diff(log(self.Tbins))
+        vals = log(self.LAMBDA(self.Tbins*un.K).value)
+        self.LAMBDA_gradient_Tbins = (log(self.Tbins[1:])+log(self.Tbins[:-1]))/2
+        self.LAMBDA_gradient = np.diff(vals)/dlogT
+    def LAMBDA(self, T, nH=None):
+        """cooling function"""
+        return 10.**np.interp(log(T.to('K').value),log(self.Tbins),log(self.LAMBDAs)) * un.erg*un.cm**3/un.s
+    def f_dlnLambda_dlnT(self, T, nH=None):         
+        """logarithmic derivative of cooling function with respect to T"""
+        return np.interp(log(T.to('K').value),self.LAMBDA_gradient_Tbins,self.LAMBDA_gradient)
+    def f_dlnLambda_dlnrho(self, T, nH):
+        """logarithmic derivative of cooling function with respect to rho"""
+        return 0.
+    
 
         
         
