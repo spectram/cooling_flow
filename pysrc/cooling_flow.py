@@ -576,7 +576,7 @@ def shoot_from_sonic_point(potential,cooling, R_sonic,R_max,R_min, tol=1e-6,max_
     print('no result reached maximum R, try rerunning with return_all_results=True and check intermediate solutions')
 
 ######### results 
-class IntegrationResult:
+class IntegrationResult(CGMsolution):
     """
     class for accessing the integration results
     """
@@ -588,14 +588,6 @@ class IntegrationResult:
         self.unbound = ( len((self.Bernoulli() > 0).nonzero()[0]) or len(self.res.t_events[1]) ) #patch for cases where B=0 is not terminal        
     def add_inward_solution(self,inward_res):
         self.inward_sonic_res  = inward_res
-    def Lambdas(self):
-        """values of LAMBDA (cooling function) at all radii of solution"""
-        return self.cooling.LAMBDA(self.Ts(),self.nHs())            
-    def Rcool(self,t):
-        """
-        cooling radius for a given time (e.g. Hubble time)
-        """
-        return 10.**np.interp(log(t.value),log(self.t_cools().value),log(self.Rs().value))*un.kpc
     def Rs(self):
         """radii of solution"""
         Rs = np.e**self.res.t
@@ -612,13 +604,6 @@ class IntegrationResult:
             rhos_sonic_inward = e**self.inward_sonic_res.y[1,:][::-1]
             rhos = np.concatenate([rhos_sonic_inward,rhos])                
         return rhos*un.g/un.cm**3    
-    def Mgas(self):
-        """cumulative gas mass of the solution at all radii"""
-        dRs = np.pad((self.Rs()[2:] - self.Rs()[:-2]).to('kpc').value/2.,1,mode='constant')*un.kpc
-        return ((4*np.pi*self.Rs()**2 * dRs * self.rhos()).cumsum()).to('Msun')
-    def nHs(self):
-        """hydrogen densities of the solution at all radii"""
-        return (X*self.rhos()/cons.m_p).to('cm**-3')
     def Ts(self):
         """temperature of the solution at all radii"""
         Ts = e**self.res.y[0,:]
@@ -627,6 +612,53 @@ class IntegrationResult:
             Ts_sonic_inward = e**self.inward_sonic_res.y[0,:][::-1]
             Ts = np.concatenate([Ts_sonic_inward,Ts])        
         return Ts*un.K
+    def stopReason(self):
+        """the reason the integration stopped"""
+        if hasattr(self,'unbound') and self.unbound: return self.eventNames[1]
+        Nevents = [len(x) for x in self.res.t_events]
+        if 1 in Nevents: return self.eventNames[Nevents.index(1)]
+        return self.eventNames[-1]
+    def save(self,fn):
+        np.savez(fn, 
+                 rs_in_kpc = self.Rs().value, 
+                 rhos_in_g_to_cm3 = self.rhos().value,
+                 Ts_in_K = self.Ts().value,
+                 vs_in_kms = self.vs())
+    def vr(self):
+        """inflow velocity of the solution at all radii"""
+        return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
+    def vs(self):
+        return self.vr()
+
+class CGMsolution(object):
+    def __init__(self,cooling,potential):
+        self.cooling = cooling
+        self.potential = potential
+    def Rs(self):
+        pass
+    def rhos(self):
+        pass
+    def Ts(self):
+        pass
+    def vs(self):
+        pass
+    def vr(self):
+        pass 
+    def Lambdas(self):
+        """values of LAMBDA (cooling function) at all radii of solution"""
+        return self.cooling.LAMBDA(self.Ts(),self.nHs())            
+    def Rcool(self,t):
+        """
+        cooling radius for a given time (e.g. Hubble time)
+        """
+        return 10.**np.interp(log(t.value),log(self.t_cools().value),log(self.Rs().value))*un.kpc
+    def Mgas(self):
+        """cumulative gas mass of the solution at all radii"""
+        dRs = np.pad((self.Rs()[2:] - self.Rs()[:-2]).to('kpc').value/2.,1,mode='constant')*un.kpc
+        return ((4*np.pi*self.Rs()**2 * dRs * self.rhos()).cumsum()).to('Msun')
+    def nHs(self):
+        """hydrogen densities of the solution at all radii"""
+        return (X*self.rhos()/cons.m_p).to('cm**-3')
     def P2ks(self):
         """pressure / k_B of the solution at all radii"""
         return (X*mu)**-1 * self.nHs() * self.Ts()
@@ -648,9 +680,6 @@ class IntegrationResult:
     def Phi(self):
         """gravitational potential at all radii"""
         return self.potential.Phi(self.Rs())
-    def vs(self):
-        """inflow velocity of the solution at all radii"""
-        return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
     def Ms(self):
         """mach number of the solution at all radii"""
         return self.vs() / self.cs()
@@ -668,30 +697,19 @@ class IntegrationResult:
         return (A*self.nHs()*self.Ts()).to('cm**-1')
     def t_flows(self):
         """flow times (r/v) of the solution at all radii"""
-        return (self.Rs()/self.vs()).to('Gyr')
+        return (self.Rs()/self.vr()).to('Gyr')
     def t_cools(self):
         """cooling times of the solution at all radii"""
         return ((gamma*(gamma-1))**-1. * 
                 self.rhos()*self.cs()**2 / 
                 (self.nHs()**2*self.Lambdas())).to('Gyr')
+    def L_cool_per_volume(self):
+        return self.nHs()*self.Lambdas()
     def Bernoulli(self):
         """Energy integral of the solution at all radii"""
         return (self.vs()**2/2. + 
                 self.cs()**2 / (gamma-1) + 
                 self.Phi()).to('km**2/s**2')
-    def stopReason(self):
-        """the reason the integration stopped"""
-        if hasattr(self,'unbound') and self.unbound: return self.eventNames[1]
-        Nevents = [len(x) for x in self.res.t_events]
-        if 1 in Nevents: return self.eventNames[Nevents.index(1)]
-        return self.eventNames[-1]
-    def save(self,fn):
-        np.savez(fn, 
-                 rs_in_kpc = self.Rs().value, 
-                 rhos_in_g_to_cm3 = self.rhos().value,
-                 Ts_in_K = self.Ts().value,
-                 vs_in_kms = self.vs())
-    
 
 
 def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None):
