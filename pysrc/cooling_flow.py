@@ -589,7 +589,7 @@ class CGMsolution(object):
         pass
     def vs(self):
         pass
-    def vr(self):
+    def vrs(self):
         pass 
     def Lambdas(self):
         """values of LAMBDA (cooling function) at all radii of solution"""
@@ -618,6 +618,8 @@ class CGMsolution(object):
     def vc2(self):
         """square of the circular velocity of the potential at all radii"""
         return self.potential.vc(self.Rs())**2
+    def vc(self):
+        return self.potential.vc(self.Rs())
     def tff(self):  
         """free fall time of the solution at all radii""" 
         return 2**0.5 *self.Rs() / self.vc2()**0.5
@@ -706,7 +708,7 @@ class IntegrationResult(CGMsolution):
                  rhos_in_g_to_cm3 = self.rhos().value,
                  Ts_in_K = self.Ts().value,
                  vs_in_kms = self.vs())
-    def vr(self):
+    def vrs(self):
         """inflow velocity of the solution at all radii"""
         return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
     def vs(self):

@@ -38,12 +38,12 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def rhos(self):
         nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*(Lambda_rad(0)/1e-22)**-0.5
         return cons.m_p * nHs / CF.X
-    def vr(self):
+    def vrs(self):
         """inflow velocity of the solution at all radii"""
         return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
     def vs(self):
         return self.vr()
-    def Omega(self):
+    def Omegas(self):
         return 0
 
 class FirstOrder(ZeroOrder):
@@ -61,13 +61,13 @@ class FirstOrder(ZeroOrder):
         return super(FirstOrder,self).Ts() * (1-self.r2Rcirc**-2*(2*np.sin(self.thetas())-5/6))
     def rhos(self):
         return super(FirstOrder,self).rhos() * (1+self.r2Rcirc**-2*(11/4*np.sin(self.thetas())-35/24))
-    def vr(self):
+    def vrs(self):
         """inflow velocity of the solution"""
         return self.vs()[0,:]
-    def vtheta(self):
+    def vthetas(self):
         """polar velocity of the solution"""
         return self.vs()[1,:]
-    def vphi(self):
+    def vphis(self):
         """angular velocity of the solution"""
         return self.vs()[2,:]
     def vs(self):
@@ -76,8 +76,8 @@ class FirstOrder(ZeroOrder):
             -super(FirstOrder,self).vrs() * 5/18.*self.r2Rcirc**-2*np.sin(2*self.thetas()),
             self.Omega()*self.Rs()*np.sin(self.thetas())
             ])            
-    def Omega(self):
-        return self.vc * self.Rcirc / self.Rs()**2
+    def Omegas(self):
+        return self.vc2()**0.5 * self.Rcirc / self.Rs()**2
 
     
     
