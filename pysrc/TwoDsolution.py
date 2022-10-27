@@ -35,7 +35,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def Rs(self):
         return self._Rs
     def Ts(self):
-        return self.vc200**2*2e6 *un.K
+        return np.ones(self._Rs.shape) * self.vc200**2*2e6 *un.K
     def rhos(self):
         nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*self.Lambda22**-0.5*un.cm**-3
         return cons.m_p * nHs / CF.X
@@ -45,7 +45,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def vs(self):
         return self.vr()
     def Omegas(self):
-        return 0*un.Gyr**-1
+        return np.zeros(self._Rs.shape)*un.Gyr**-1
 
 class FirstOrder(ZeroOrder):
     dtheta=0.01
