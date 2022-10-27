@@ -31,12 +31,13 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
         self.r10s = self.Rs() / (10*un.kpc)
         self.cooling = PowerLawLambda(Lambda)
         self.potential = HaloPotential.PowerLaw(0,vc,300*un.kpc)    
+        self.Lambda22 = Lambda/(10**-22*un.erg/un.s*un.cm**3)
     def Rs(self):
         return self._Rs
     def Ts(self):
         return self.vc200**2*2e6 *un.K
     def rhos(self):
-        nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*(Lambda_rad(0)/1e-22)**-0.5
+        nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*self.Lambda22**-0.5
         return cons.m_p * nHs / CF.X
     def vrs(self):
         """inflow velocity of the solution at all radii"""
@@ -44,7 +45,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def vs(self):
         return self.vr()
     def Omegas(self):
-        return 0
+        return 0*
 
 class FirstOrder(ZeroOrder):
     dtheta=0.01
@@ -77,7 +78,7 @@ class FirstOrder(ZeroOrder):
             self.Omega()*self.Rs()*np.sin(self.thetas())
             ])            
     def Omegas(self):
-        return self.vc() * self.Rcirc / self.Rs()**2
+        return (self.vc() * self.Rcirc / self.Rs()**2).to('Gyr**-1')
 
     
     

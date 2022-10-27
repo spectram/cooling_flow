@@ -652,7 +652,7 @@ class CGMsolution(object):
         return ((gamma*(gamma-1))**-1. * 
                 self.rhos()*self.cs()**2 / 
                 (self.nHs()**2*self.Lambdas())).to('Gyr')
-    def L_cool_per_volume(self):
+    def L_cools_per_volume(self):
         return self.nHs()*self.Lambdas()
     def Bernoulli(self):
         """Energy integral of the solution at all radii"""
