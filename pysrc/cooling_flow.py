@@ -576,59 +576,6 @@ def shoot_from_sonic_point(potential,cooling, R_sonic,R_max,R_min, tol=1e-6,max_
     print('no result reached maximum R, try rerunning with return_all_results=True and check intermediate solutions')
 
 ######### results 
-class IntegrationResult(CGMsolution):
-    """
-    class for accessing the integration results
-    """
-    eventNames = 'sonic point','unbound','lowT','max R reached'    
-    def __init__(self, res, Mdot, potential, cooling, T0factor=None,tflow2tcool0=None,isInward=False):
-        self.res, self.Mdot, self.T0factor,self.tflow2tcool0,self.isInward,self.potential,self.cooling = (
-            res, Mdot.to('Msun/yr'), T0factor, tflow2tcool0,isInward,potential,cooling)        
-        self.inward_sonic_res = None
-        self.unbound = ( len((self.Bernoulli() > 0).nonzero()[0]) or len(self.res.t_events[1]) ) #patch for cases where B=0 is not terminal        
-    def add_inward_solution(self,inward_res):
-        self.inward_sonic_res  = inward_res
-    def Rs(self):
-        """radii of solution"""
-        Rs = np.e**self.res.t
-        if self.isInward: Rs = (Rs**-1.)[::-1]
-        if self.inward_sonic_res !=None:
-            Rs_sonic_inward = np.e**-self.inward_sonic_res.t[::-1]
-            Rs = np.concatenate([Rs_sonic_inward,Rs])        
-        return Rs * un.kpc
-    def rhos(self):
-        """densities of the solution at all radii"""
-        rhos = e**self.res.y[1,:]
-        if self.isInward: rhos = rhos[::-1]
-        if self.inward_sonic_res !=None:
-            rhos_sonic_inward = e**self.inward_sonic_res.y[1,:][::-1]
-            rhos = np.concatenate([rhos_sonic_inward,rhos])                
-        return rhos*un.g/un.cm**3    
-    def Ts(self):
-        """temperature of the solution at all radii"""
-        Ts = e**self.res.y[0,:]
-        if self.isInward: Ts = Ts[::-1]
-        if self.inward_sonic_res !=None:
-            Ts_sonic_inward = e**self.inward_sonic_res.y[0,:][::-1]
-            Ts = np.concatenate([Ts_sonic_inward,Ts])        
-        return Ts*un.K
-    def stopReason(self):
-        """the reason the integration stopped"""
-        if hasattr(self,'unbound') and self.unbound: return self.eventNames[1]
-        Nevents = [len(x) for x in self.res.t_events]
-        if 1 in Nevents: return self.eventNames[Nevents.index(1)]
-        return self.eventNames[-1]
-    def save(self,fn):
-        np.savez(fn, 
-                 rs_in_kpc = self.Rs().value, 
-                 rhos_in_g_to_cm3 = self.rhos().value,
-                 Ts_in_K = self.Ts().value,
-                 vs_in_kms = self.vs())
-    def vr(self):
-        """inflow velocity of the solution at all radii"""
-        return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
-    def vs(self):
-        return self.vr()
 
 class CGMsolution(object):
     def __init__(self,cooling,potential):
@@ -711,6 +658,59 @@ class CGMsolution(object):
                 self.cs()**2 / (gamma-1) + 
                 self.Phi()).to('km**2/s**2')
 
+class IntegrationResult(CGMsolution):
+    """
+    class for accessing the integration results
+    """
+    eventNames = 'sonic point','unbound','lowT','max R reached'    
+    def __init__(self, res, Mdot, potential, cooling, T0factor=None,tflow2tcool0=None,isInward=False):
+        self.res, self.Mdot, self.T0factor,self.tflow2tcool0,self.isInward,self.potential,self.cooling = (
+            res, Mdot.to('Msun/yr'), T0factor, tflow2tcool0,isInward,potential,cooling)        
+        self.inward_sonic_res = None
+        self.unbound = ( len((self.Bernoulli() > 0).nonzero()[0]) or len(self.res.t_events[1]) ) #patch for cases where B=0 is not terminal        
+    def add_inward_solution(self,inward_res):
+        self.inward_sonic_res  = inward_res
+    def Rs(self):
+        """radii of solution"""
+        Rs = np.e**self.res.t
+        if self.isInward: Rs = (Rs**-1.)[::-1]
+        if self.inward_sonic_res !=None:
+            Rs_sonic_inward = np.e**-self.inward_sonic_res.t[::-1]
+            Rs = np.concatenate([Rs_sonic_inward,Rs])        
+        return Rs * un.kpc
+    def rhos(self):
+        """densities of the solution at all radii"""
+        rhos = e**self.res.y[1,:]
+        if self.isInward: rhos = rhos[::-1]
+        if self.inward_sonic_res !=None:
+            rhos_sonic_inward = e**self.inward_sonic_res.y[1,:][::-1]
+            rhos = np.concatenate([rhos_sonic_inward,rhos])                
+        return rhos*un.g/un.cm**3    
+    def Ts(self):
+        """temperature of the solution at all radii"""
+        Ts = e**self.res.y[0,:]
+        if self.isInward: Ts = Ts[::-1]
+        if self.inward_sonic_res !=None:
+            Ts_sonic_inward = e**self.inward_sonic_res.y[0,:][::-1]
+            Ts = np.concatenate([Ts_sonic_inward,Ts])        
+        return Ts*un.K
+    def stopReason(self):
+        """the reason the integration stopped"""
+        if hasattr(self,'unbound') and self.unbound: return self.eventNames[1]
+        Nevents = [len(x) for x in self.res.t_events]
+        if 1 in Nevents: return self.eventNames[Nevents.index(1)]
+        return self.eventNames[-1]
+    def save(self,fn):
+        np.savez(fn, 
+                 rs_in_kpc = self.Rs().value, 
+                 rhos_in_g_to_cm3 = self.rhos().value,
+                 Ts_in_K = self.Ts().value,
+                 vs_in_kms = self.vs())
+    def vr(self):
+        """inflow velocity of the solution at all radii"""
+        return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
+    def vs(self):
+        return self.vr()
 
 def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None):
     """sample solution in order to create initial conditions for particle hydro simulation"""
