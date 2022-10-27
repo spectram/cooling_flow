@@ -37,7 +37,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def Ts(self):
         return self.vc200**2*2e6 *un.K
     def rhos(self):
-        nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*self.Lambda22**-0.5
+        nHs =  0.8e-3*self.r10s**-1.5*self.vc200*self.Mdot1**0.5*self.Lambda22**-0.5*un.cm**-3
         return cons.m_p * nHs / CF.X
     def vrs(self):
         """inflow velocity of the solution at all radii"""
