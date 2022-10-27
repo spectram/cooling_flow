@@ -45,7 +45,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
     def vs(self):
         return self.vr()
     def Omegas(self):
-        return 0*
+        return 0*un.Gyr**-1
 
 class FirstOrder(ZeroOrder):
     dtheta=0.01
