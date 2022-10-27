@@ -77,7 +77,7 @@ class FirstOrder(ZeroOrder):
             self.Omega()*self.Rs()*np.sin(self.thetas())
             ])            
     def Omegas(self):
-        return self.vc2()**0.5 * self.Rcirc / self.Rs()**2
+        return self.vc() * self.Rcirc / self.Rs()**2
 
     
     
