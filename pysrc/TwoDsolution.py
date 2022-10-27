@@ -63,7 +63,10 @@ class FirstOrder(ZeroOrder):
     def rhos(self):
         return super(FirstOrder,self).rhos() * (1+self.r2Rcirc**-2*(11/4*np.sin(self.thetas())-35/24))
     def P2ks(self):
-        return super(FirstOrder,self).P2ks() * (1+self.r2Rcirc**-2*(3/4*np.sin(self.thetas())-5/8))        
+        return ((CF.X*CF.mu)**-1 * 
+                super(FirstOrder,self).nHs() * 
+                super(FirstOrder,self).Ts() * 
+                (1+self.r2Rcirc**-2*(3/4*np.sin(self.thetas())-5/8)))
     def vrs(self):
         """inflow velocity of the solution"""
         return self.vs()[0,:]
