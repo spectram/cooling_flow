@@ -29,7 +29,7 @@ class ZeroOrder(CF.CGMsolution): #no ang. mom. solution
         self.Mdot1 = Mdot/(un.Msun/un.yr)
         self.vc200 = vc/(200*un.km/un.s) 
         self.r10s = self.Rs() / (10*un.kpc)
-        self.cooling = ConstantLambda(Lambda)
+        self.cooling = PowerLawLambda(Lambda)
         self.potential = HaloPotential.PowerLaw(0,vc,300*un.kpc)    
     def Rs(self):
         return self._Rs
