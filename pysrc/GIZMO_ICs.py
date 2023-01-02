@@ -50,7 +50,8 @@ class ICs:
     DiscHeight = 0.2*un.kpc
     Z_disk = 1
     
-    def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc):
+    def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
+                 Rres2Rcool=2):
         if ics!=None: #copy constructor for changing only Rcirc
             self.vc = ics.vc
             self.Rcirc = ics.Rcirc
@@ -62,6 +63,7 @@ class ICs:
             self.smallGalaxy = ics.smallGalaxy
             self.resolution = ics.resolution
             self.fgas_str = ics.fgas_str
+            self.Rres2Rcool=ics.Rres2Rcool
         else:                       
             self.vc = vc
             self.Rcirc = Rcirc
@@ -72,6 +74,7 @@ class ICs:
             self.smallGalaxy = smallGalaxy
             self.resolution = resolution
             self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
+            self.Rres2Rcool = Rres2Rcool
                  
     def calc_CF_solution(self,tol=1e-6,pr=True):
         self.CF_solution = CF.shoot_from_sonic_point(self.potential,
@@ -79,8 +82,8 @@ class ICs:
                                         self.Rsonic,
                                         self.R_max,self.R_min,max_step=self.max_step,tol=tol,
                                         pr=pr)
-    def sample(self,Rres2Rcool=2):
-        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=Rres2Rcool)
+    def sample(self):
+        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=self.Rres2Rcool)
     def outdirname(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
@@ -101,17 +104,17 @@ class ICs:
                                  Rcirc_str)
         
         
-    def create_output_files(self,Rres2Rcool=2):
+    def create_output_files(self):
         outdir = self.outdirname()
         if not os.path.exists(outdir): os.mkdir(outdir)
         print('files saved to: %s'%outdir)
-        self.create_ICs_hdf5_file(outdir+'/init_snapshot',Rres2Rcool=Rres2Rcool)
+        self.create_ICs_hdf5_file(outdir+'/init_snapshot')
         self.update_GIZMO_files(outdir+'/')
-    def create_ICs_hdf5_file(self,fn_out,Rres2Rcool=2):                
+    def create_ICs_hdf5_file(self,fn_out):                
         makeDisk_filename = self.makedisk_filename()
         print(makeDisk_filename)
         snap = gsr.Snapshot(makeDisk_filename)
-        gas_masses, gas_coords, gas_vels, gas_internalEnergies = self.sample(Rres2Rcool=Rres2Rcool)
+        gas_masses, gas_coords, gas_vels, gas_internalEnergies = self.sample()
         
         fwrite = h5py.File("%s.hdf5"%fn_out, "w")
         try:        

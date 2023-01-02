@@ -712,7 +712,7 @@ class IntegrationResult(CGMsolution):
         """inflow velocity of the solution at all radii"""
         return (self.Mdot / (4*pi*self.Rs()**2*self.rhos())).to('km/s')
     def vs(self):
-        return self.vr()
+        return self.vrs()
 
 def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None):
     """sample solution in order to create initial conditions for particle hydro simulation"""
