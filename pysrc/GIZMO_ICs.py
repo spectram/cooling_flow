@@ -9,12 +9,14 @@ import gsr
 
 if os.getenv('HOME')=='/home/jonathan':
     outdir_data = '/home/jonathan/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
+elif os.getenv('HOME')=='/Users/jonathanstern':
+    outdir_data = '/Users/jonathanstern/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
 else:
     outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
 
 keys_dict = {'pos':'Coordinates', 
              'vel':'Velocities',
-             'ids':'IDs',
+             'ids':'ParticleIDs',
              'mass':'Masses',
              'energies':'InternalEnergy'}
 
@@ -36,7 +38,7 @@ class ICs:
     outdir_base = '../GIZMO_ICs/'
     init_base_filename = outdir_base+'init.c_base'
     analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
-    fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s.ic'
+    fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s%s.ic'
     outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
@@ -48,7 +50,8 @@ class ICs:
     DiscHeight = 0.2*un.kpc
     Z_disk = 1
     
-    def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None):
+    def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
+                 Rres2Rcool=2):
         if ics!=None: #copy constructor for changing only Rcirc
             self.vc = ics.vc
             self.Rcirc = ics.Rcirc
@@ -60,16 +63,18 @@ class ICs:
             self.smallGalaxy = ics.smallGalaxy
             self.resolution = ics.resolution
             self.fgas_str = ics.fgas_str
+            self.Rres2Rcool=ics.Rres2Rcool
         else:                       
             self.vc = vc
             self.Rcirc = Rcirc
             self.Rsonic = Rsonic
             self.Z_CGM = Z_CGM
-            self.potential = Halo.PowerLaw(m=0.,vc_Rvir=self.vc,Rvir=200*un.kpc)
+            self.potential = Halo.PowerLaw(m=m,vc_Rvir=self.vc,Rvir=Rvc)
             self.cooling = Cool.Wiersma_Cooling(self.Z_CGM,self.z_cooling)
             self.smallGalaxy = smallGalaxy
             self.resolution = resolution
             self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
+            self.Rres2Rcool = Rres2Rcool
                  
     def calc_CF_solution(self,tol=1e-6,pr=True):
         self.CF_solution = CF.shoot_from_sonic_point(self.potential,
@@ -77,8 +82,8 @@ class ICs:
                                         self.Rsonic,
                                         self.R_max,self.R_min,max_step=self.max_step,tol=tol,
                                         pr=pr)
-    def sample(self,Rres2Rcool=1):
-        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=Rres2Rcool)
+    def sample(self):
+        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=self.Rres2Rcool)
     def outdirname(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
@@ -91,22 +96,25 @@ class ICs:
     def makedisk_filename(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
+        Rcirc_str = ('','_Rcirc%d'%self.Rcirc.value)[self.Rcirc.value!=10]
         return self.fn_diskOnly%(self.vc.value,
                                  ('','_small_galaxy')[self.smallGalaxy],
                                  '_res'+res_str,
-                                 self.fgas_str)
+                                 self.fgas_str,
+                                 Rcirc_str)
         
         
-    def create_output_files(self,Rres2Rcool=1):
+    def create_output_files(self):
         outdir = self.outdirname()
         if not os.path.exists(outdir): os.mkdir(outdir)
-        self.create_ICs_hdf5_file(outdir+'/init_snapshot',Rres2Rcool=Rres2Rcool)
+        print('files saved to: %s'%outdir)
+        self.create_ICs_hdf5_file(outdir+'/init_snapshot')
         self.update_GIZMO_files(outdir+'/')
-    def create_ICs_hdf5_file(self,fn_out,Rres2Rcool=1):                
+    def create_ICs_hdf5_file(self,fn_out):                
         makeDisk_filename = self.makedisk_filename()
         print(makeDisk_filename)
         snap = gsr.Snapshot(makeDisk_filename)
-        gas_masses, gas_coords, gas_vels, gas_internalEnergies = self.sample(Rres2Rcool=Rres2Rcool)
+        gas_masses, gas_coords, gas_vels, gas_internalEnergies = self.sample()
         
         fwrite = h5py.File("%s.hdf5"%fn_out, "w")
         try:        
@@ -114,7 +122,7 @@ class ICs:
             for iPartType in range(6):
                 grp = fwrite.create_group("PartType%d"%iPartType)
                 for k in snap.SnapshotData.keys():
-                    if k in ('header','ids'): continue
+                    if k in ('header',): continue
                     elif k=='energies': 
                         if iPartType!=0: continue
                         data = snap.SnapshotData[k]
@@ -137,6 +145,10 @@ class ICs:
                             
                         if k=='vel':
                             data   = np.concatenate([data,gas_vels],axis=0)             
+                        if k=='ids':
+                            data   = np.arange(len(data)+len(gas_masses))
+                            print('max gas id:',data.max())
+                        
                     if k=='mass': 
                         if data.shape[0]!=0:
                             unique_masses = ['%.2g'%x for x in np.unique(data)*1e10]

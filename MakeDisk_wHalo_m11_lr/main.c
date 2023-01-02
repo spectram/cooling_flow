@@ -20,7 +20,7 @@ int main(int argc,char *argv[])
 
   /*******************************************/
 
-  VC		        =     200;                          /* for analytic isothermal profile */
+  VC		        =     210;                          /* for analytic isothermal profile */
   CC                    =     10.;                          /* not used */
   Mvir                  =     100;              	    /* not used */
   LAMBDA                =   0.033;       		    /* not used          */
@@ -32,7 +32,7 @@ int main(int argc,char *argv[])
   M_BH                  =     0.00002;			    /* seed BH mass in units of 10^10 Msolar */
 
   DARKMASS_IN_ROPT      =    -10.0;	                    /* not used  */
-  H                     =      0.25;              	    /* manually set radial disk scale length, this decouples
+  H                     =      4.5;              	    /* manually set radial disk scale length, this decouples
                            		                       the angular momentum of the disk and the halo and hence
                            		                       the spin doesn't set the size of H and Jd is not
                            		                       fixed.   */
@@ -49,7 +49,7 @@ int main(int argc,char *argv[])
 				   			       2 = Power Law (with PowerLawGamma < 2) 
 				   			       3 = exp. (with Rd -> Rd*Alpha) 
 				   				         with cutoff inside HoleRadius */
-  GasExpAlpha           =      2.0;                          /* gas is exp. with Rd*Alpha scale length */
+  GasExpAlpha           =        1;                          /* gas is exp. with Rd*Alpha scale length */
   PowerLawGamma         =        1;               	    /* power-law index, sigma ~ r^-gamma   (gamma=1 is mestel) - must be < 2 */
   PowerLawCutOff        =        4;			    /* in units of Rd, when gas disk is terminated */
   HoleRadius            =     0.03;			    /* in units of Rd, when inner gas disk is cut off */
