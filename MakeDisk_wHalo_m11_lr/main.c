@@ -1,3 +1,6 @@
+
+
+
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -20,7 +23,7 @@ int main(int argc,char *argv[])
 
   /*******************************************/
 
-  VC		        =     210;                          /* for analytic isothermal profile */
+  VC		        =     230;                          /* for analytic isothermal profile */
   CC                    =     10.;                          /* not used */
   Mvir                  =     100;              	    /* not used */
   LAMBDA                =   0.033;       		    /* not used          */
