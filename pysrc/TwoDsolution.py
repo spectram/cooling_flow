@@ -59,14 +59,14 @@ class FirstOrder(ZeroOrder):
     def thetas(self):
         return np.meshgrid(self._Rs,self._thetas)[1]
     def Ts(self):
-        return super(FirstOrder,self).Ts() * (1-self.r2Rcirc**-2*(2*np.sin(self.thetas())-5/6))
+        return super(FirstOrder,self).Ts() * (1-self.r2Rcirc**-2*(2*np.sin(self.thetas())**2-5/6))
     def rhos(self):
-        return super(FirstOrder,self).rhos() * (1+self.r2Rcirc**-2*(11/4*np.sin(self.thetas())-35/24))
+        return super(FirstOrder,self).rhos() * (1+self.r2Rcirc**-2*(11/4*np.sin(self.thetas())**2-35/24))
     def P2ks(self):
         return (CF.mu**-1 / cons.m_p * 
                 super(FirstOrder,self).rhos() * 
                 super(FirstOrder,self).Ts() * 
-                (1+self.r2Rcirc**-2*(3/4*np.sin(self.thetas())-5/8)))
+                (1+self.r2Rcirc**-2*(3/4*np.sin(self.thetas())**2-5/8)))
     def vrs(self):
         """inflow velocity of the solution"""
         return self.vs()[0,:]
@@ -78,7 +78,7 @@ class FirstOrder(ZeroOrder):
         return self.vs()[2,:]
     def vs(self):
         return np.array([
-            super(FirstOrder,self).vrs() * (1-self.r2Rcirc**-2*(23/12*np.sin(self.thetas())-65/72)),
+            super(FirstOrder,self).vrs() * (1-self.r2Rcirc**-2*(23/12*np.sin(self.thetas())**2-65/72)),
             -super(FirstOrder,self).vrs() * 5/18.*self.r2Rcirc**-2*np.sin(2*self.thetas()),
             self.Omega()*self.Rs()*np.sin(self.thetas())
             ])            
