@@ -23,7 +23,7 @@ int main(int argc,char *argv[])
 
   /*******************************************/
 
-  VC		        =     230;                          /* for analytic isothermal profile */
+  VC		        =     200;                          /* for analytic isothermal profile */
   CC                    =     10.;                          /* not used */
   Mvir                  =     100;              	    /* not used */
   LAMBDA                =   0.033;       		    /* not used          */
@@ -35,7 +35,7 @@ int main(int argc,char *argv[])
   M_BH                  =     0.00002;			    /* seed BH mass in units of 10^10 Msolar */
 
   DARKMASS_IN_ROPT      =    -10.0;	                    /* not used  */
-  H                     =      4.5;              	    /* manually set radial disk scale length, this decouples
+  H                     =      3.75;              	    /* manually set radial disk scale length, this decouples
                            		                       the angular momentum of the disk and the halo and hence
                            		                       the spin doesn't set the size of H and Jd is not
                            		                       fixed.   */
