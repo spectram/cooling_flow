@@ -128,6 +128,7 @@ class ICs:
                         data = snap.SnapshotData[k]
                     else: 
                         data = snap.SnapshotData[k][iPartType]            
+                        print(iPartType, data)
                     if iPartType==0:                
                         if k=="pos":
                             number_without_CGM = data.shape[0]
@@ -172,6 +173,7 @@ class ICs:
                     grp.create_dataset(keys_dict[k], data.shape, dtype=data.dtype)
                     grp[keys_dict[k]][:] = data 
             header = snap.get_header()
+            print(header)
             header['Npart'][0] += len(gas_masses)
             header['Ntot'] += len(gas_masses)
             whead.attrs['NumPart_Total'] = whead.attrs['NumPart_ThisFile'] = header['Npart']
