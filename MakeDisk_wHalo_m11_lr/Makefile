@@ -22,7 +22,7 @@ OBJS   = $(SRCS:.c=.o)
 INCL   = prototypes.h globvars.h nrsrc/nrutil.h nrsrc/nr.h
 
 
-CFLAGS = -O3 -DADDBH -m64
+CFLAGS = -O3 -DADDBH -no-pie -m64
 
 LIBS   =  -lm
 

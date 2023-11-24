@@ -101,12 +101,12 @@ class Snapshot:
         fmtstring = "{0:d}i4x".format(self.Ntot)
         everything = struct.unpack(fmtstring, instring)
 
-        self.ID = [np.zeros(i, dtype=np.int) for i in self.Npart]
+        self.ID = [np.zeros(i, dtype=np.int64) for i in self.Npart]
 
         offset = 0
         for i in range(6):
             chunk = everything[offset:offset+self.Npart[i]]
-            self.ID[i] = np.array(chunk, dtype=np.int)
+            self.ID[i] = np.array(chunk, dtype=np.int64)
             offset += self.Npart[i]
         return self.ID
 

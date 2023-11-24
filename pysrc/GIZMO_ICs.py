@@ -11,6 +11,8 @@ if os.getenv('HOME')=='/home/jonathan':
     outdir_data = '/home/jonathan/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
 elif os.getenv('HOME')=='/Users/jonathanstern':
     outdir_data = '/Users/jonathanstern/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
+elif os.getenv('HOME')=='/home/spectram':
+    outdir_data = '/home/spectram/projects/AM_tel_aviv/codes/'
 else:
     outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
 
@@ -39,7 +41,7 @@ class ICs:
     init_base_filename = outdir_base+'init.c_base'
     analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
     fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s%s.ic'
-    outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s'
+    outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s_theta%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
     R_min    = 0.3*un.kpc             #inner radius of supersonic part of solution
@@ -51,7 +53,7 @@ class ICs:
     Z_disk = 1
     
     def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
-                 Rres2Rcool=2):
+                 Rres2Rcool=2, theta_offset=0):
         if ics!=None: #copy constructor for changing only Rcirc
             self.vc = ics.vc
             self.Rcirc = ics.Rcirc
@@ -64,6 +66,7 @@ class ICs:
             self.resolution = ics.resolution
             self.fgas_str = ics.fgas_str
             self.Rres2Rcool=ics.Rres2Rcool
+            self.theta_offset=theta_offset
         else:                       
             self.vc = vc
             self.Rcirc = Rcirc
@@ -75,6 +78,7 @@ class ICs:
             self.resolution = resolution
             self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
             self.Rres2Rcool = Rres2Rcool
+            self.theta_offset=theta_offset
                  
     def calc_CF_solution(self,tol=1e-6,pr=True):
         self.CF_solution = CF.shoot_from_sonic_point(self.potential,
@@ -83,7 +87,8 @@ class ICs:
                                         self.R_max,self.R_min,max_step=self.max_step,tol=tol,
                                         pr=pr)
     def sample(self):
-        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,Rres2Rcool=self.Rres2Rcool)
+        return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,\
+                         Rres2Rcool=self.Rres2Rcool, theta_offset=self.theta_offset)
     def outdirname(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
@@ -92,7 +97,8 @@ class ICs:
                                     self.CF_solution.Mdot.value*1000,
                                     self.Rcirc.value,
                                     self.fgas_str,
-                                    res_str)
+                                    res_str,
+                                    str(np.round(np.degrees(self.theta_offset))))
     def makedisk_filename(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
@@ -185,6 +191,7 @@ class ICs:
             whead.attrs['Flag_Feedback'] = 0
             whead.attrs['Flag_StellarAge'] = 0
             whead.attrs['Flag_Metals'] = 0
+            whead.attrs['Time'] = 0
             whead.attrs['BoxSize'] = whead.attrs['Omega0'] = whead.attrs['OmegaLambda'] = whead.attrs['HubbleParam'] = whead.attrs['Redshift'] = 0
         except:           
             fwrite.close()

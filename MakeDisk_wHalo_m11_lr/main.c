@@ -10,7 +10,7 @@
 #include "globvars.h"
 #include "prototypes.h"
 
-#define RES_FACTOR 8  /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
+#define RES_FACTOR 1  /* should equal 8e4/desired resolution. if disk/bulge/gas disk mass changes, change N_DISK / N_Gas / N_bulge accordingly  */
 #define f_gas 0.2    /* should equal gas fraction in disk  */
 
 int main(int argc,char *argv[])
@@ -22,19 +22,19 @@ int main(int argc,char *argv[])
 
   /*******************************************/
 
-  VC		        =     100;                          /* for analytic isothermal profile */
+  VC		        =     200;                          /* for analytic isothermal profile */
   CC                    =     10.;                          /* not used */
   Mvir                  =     100;              	    /* not used */
   LAMBDA                =   0.033;       		    /* not used          */
   M_HALO                =      84;		            /* not used */
-  M_DISK                =     0.01;   		            /* total disk stellar mass in units of 10^10 Msolar */
+  M_DISK                =     6;   		            /* total disk stellar mass in units of 10^10 Msolar */
   M_GAS                 =     M_DISK*f_gas;   		    /* total disk gas mass in units of 10^10 Msolar */
   M_GASHALO             =     2.48;              	    /* not used */
-  M_BULGE               =     0.002;   		            /* total bulge mass in units of 10^10 Msolar */
+  M_BULGE               =     0.02;   		            /* total bulge mass in units of 10^10 Msolar */
   M_BH                  =     0.00002;			    /* seed BH mass in units of 10^10 Msolar */
 
   DARKMASS_IN_ROPT      =    -10.0;	                    /* not used  */
-  H                     =     1.25;              	    /* manually set radial disk scale length, this decouples
+  H                     =     3.75;              	    /* manually set radial disk scale length, this decouples
                            		                       the angular momentum of the disk and the halo and hence
                            		                       the spin doesn't set the size of H and Jd is not
                            		                       fixed.   */

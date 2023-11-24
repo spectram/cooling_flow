@@ -714,7 +714,38 @@ class IntegrationResult(CGMsolution):
     def vs(self):
         return self.vrs()
 
-def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None):
+def rotate_vectors(vectors, theta_offset, axis='y'):
+    cos_theta = np.cos(theta_offset)
+    sin_theta = np.sin(theta_offset)
+
+    if axis =='x':
+        rotation_matrix = np.array([[    1,          0,    0],
+                                    [0, cos_theta, -sin_theta],
+                                    [0, sin_theta,  cos_theta]])
+    elif axis =='y':
+        rotation_matrix = np.array([[cos_theta,  0, sin_theta],
+                                    [0,          1,         0],
+                                    [-sin_theta, 0, cos_theta]])
+    elif axis =='z':
+        rotation_matrix = np.array([[cos_theta, -sin_theta, 0],
+                                    [sin_theta,  cos_theta, 0],
+                                    [    0,          0,    1]])
+
+    rotated_vectors = np.dot(vectors, rotation_matrix.T)
+    return rotated_vectors
+
+def fibonacci_sphere(samples=1000):
+    phi = np.linspace(0, 2 * np.pi, samples, endpoint=False)
+    golden_angle = np.pi * (3 - np.sqrt(5))  # Golden angle to ensure uniform distribution
+
+    theta = golden_angle * np.arange(samples)
+    theta = np.arccos(1 - (2 * (theta / np.pi) % 2))
+
+    #x, y, z = np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)
+
+    return phi, theta
+
+def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None, theta_offset=0., rotaxis='y'):
     """sample solution in order to create initial conditions for particle hydro simulation"""
     Mgass = self.Mgas()
     rs = self.Rs()
@@ -727,16 +758,18 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         Mout = np.interp(Rout,rs, Mgass)
         dM = Mout- Min
         N = int(dM / resolution)
-            
+        #print('\n Rin:',Rin,'Rout:',Rout, 'Min:',Min,'Mout:',Mout,'Resoultion:',resolution,'N:',N,'\n')
+    
         N2 = 2*N
         q = np.random.random_sample(N2)
         sampled_rs     = np.interp(Min+q*dM, Mgass, rs)
         sampled_phis   = np.random.random_sample(N2) * 2 * np.pi
         sampled_thetas = np.arccos(np.random.random_sample(N2) * 2 - 1)
-        
+        #sampled_phis, sampled_thetas = fibonacci_sphere(N2)
+
         sampled_Rcylinders = sampled_rs*np.sin(sampled_thetas)
         sampled_zs = sampled_rs*np.cos(sampled_thetas)
-        bad_inds = (sampled_Rcylinders  < avoid_Rs) & (np.abs(sampled_zs) < avoid_zs)
+        bad_inds = (sampled_Rcylinders  < avoid_Rs) & (np.abs(sampled_zs) < avoid_zs) #Avoids the disc
         
         sampled_rs     = sampled_rs[~bad_inds][:N]
         sampled_phis   = sampled_phis[~bad_inds][:N]
@@ -761,6 +794,12 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         sampled_coords = np.array([sampled_xs,sampled_ys,sampled_zs]).T
         sampled_vs = np.array([sampled_vxs,sampled_vys,sampled_vzs]).T
         
+        if theta_offset !=0.:
+            if Rin==0*un.kpc: 
+                print("\nApplying theta offset", np.degrees(theta_offset),'\n')
+            sampled_coords = rotate_vectors(sampled_coords, theta_offset, axis=rotaxis)
+            sampled_vs = rotate_vectors(sampled_vs, theta_offset, axis=rotaxis)
+
         if Rin==0:
             fin_Ms = sampled_Ms
             fin_coords = sampled_coords
