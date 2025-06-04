@@ -12,7 +12,7 @@ if os.getenv('HOME')=='/home/jonathan':
 elif os.getenv('HOME')=='/Users/jonathanstern':
     outdir_data = '/Users/jonathanstern/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
 elif os.getenv('HOME')=='/home/spectram':
-    outdir_data = '/home/spectram/projects/AM_tel_aviv/codes/'
+    outdir_data = '/home/spectram/projects/misaligned_inflow/ICs/LowRes_2025/'
 else:
     outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
 
@@ -49,7 +49,7 @@ class ICs:
     z_cooling = 0    
     # these params should be the same as in MakeDisk/main.c
     DiscScale = 2.5*un.kpc
-    DiscHeight = 0.2*un.kpc
+    DiscHeight = 0.25*un.kpc
     Z_disk = 1
     
     def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
