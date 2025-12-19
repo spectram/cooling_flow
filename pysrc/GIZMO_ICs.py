@@ -13,6 +13,8 @@ elif os.getenv('HOME')=='/Users/jonathanstern':
     outdir_data = '/Users/jonathanstern/Dropbox/jonathanmain/CGM/KY_sims/ICs/' 
 elif os.getenv('HOME')=='/home/spectram':
     outdir_data = '/home/spectram/projects/misaligned_inflow/ICs/LowRes_2025/'
+elif os.getenv('HOME')=='/Users/24398082':
+    outdir_data = '/Users/24398082/projects/misaligned_inflow/dep/ICs/'
 else:
     outdir_data = '/mnt/home/jstern/ceph/ICs/' #outdir_base
 

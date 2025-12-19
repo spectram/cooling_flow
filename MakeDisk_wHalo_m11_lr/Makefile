@@ -22,15 +22,16 @@ OBJS   = $(SRCS:.c=.o)
 INCL   = prototypes.h globvars.h nrsrc/nrutil.h nrsrc/nr.h
 
 
-CFLAGS = -O3 -DADDBH -no-pie -m64
+CFLAGS = -O3 -DADDBH -no-pie -m64 -fcommon
+CFLAGS += -Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=return-mismatch
 
 LIBS   =  -lm
 
-CC     =  gcc
+CC     =  /opt/homebrew/opt/gcc/bin/gcc-15
 
 
 $(EXEC): $(OBJS) 
-	gcc $(CFLAGS) $(OBJS) -o $(EPATH)$(EXEC)  $(LIBS)
+	/opt/homebrew/opt/gcc/bin/gcc-15 $(CFLAGS) $(OBJS) -o $(EPATH)$(EXEC)  $(LIBS)
 
 $(OBJS): $(INCL) 
 

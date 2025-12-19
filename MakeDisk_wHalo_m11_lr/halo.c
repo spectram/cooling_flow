@@ -10,7 +10,7 @@
 
 
 
-compute_velocity_dispersions_halo()
+void compute_velocity_dispersions_halo()
 {
   int i,j;
   double z,R;
