@@ -745,8 +745,23 @@ def fibonacci_sphere(samples=1000):
 
     return phi, theta
 
-def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None, theta_offset=0., rotaxis='y'):
-    """sample solution in order to create initial conditions for particle hydro simulation"""
+def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None, 
+           theta_offset=0., rotaxis='y', AMD='constant'):
+    """sample solution in order to create initial conditions for particle hydro simulation
+    Accepts:
+    resolution: desired mass resolution of particles (in Msun)
+    Rcirc: circularization radius inside which rotational support is assumed
+    avoid_Rs, avoid_zs: cylindrical radii and vertical heights to avoid when sampling (to avoid the disc)
+    Rres2Rcool: factor multiplying cooling radius (at t_cool=10Gyr) to define maximum sampling radius
+    theta_function: function of theta to weight sampling in polar angle (default: sin(theta))
+    theta_offset: angle (in radians) to rotate sampled positions and velocities around rotaxis
+    rotaxis: axis around which to rotate sampled positions and velocities
+    AMD: angular momentum distribution, 'constant' for constant specific angular momentum,
+        'r' for j proportional to r,
+        'r_half' for j proportional to sqrt(r).
+    Returns:
+    
+    """
     Mgass = self.Mgas()
     rs = self.Rs()
     Rin, Rout = 0*un.kpc, self.Rcool(10*un.Gyr)*Rres2Rcool        
@@ -785,8 +800,18 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         sampled_epsilons     = np.interp(sampled_rs, rs, self.internalEnergy())
         
         vcRcirc = np.interp(Rcirc, self.Rs(), self.vc2())**0.5
-        sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
-                          np.interp(sampled_rs,self.Rs(),self.vc2())**0.5        * (sampled_rs < Rcirc) )
+        if AMD=='constant':
+            sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
+                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
+        elif AMD=='r':
+            sampled_vphis = ( (vcRcirc * np.sin(sampled_thetas)) * (sampled_rs > Rcirc) + 
+                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
+        elif AMD=='r_half':
+            sampled_vphis = ( (vcRcirc * (Rcirc/sampled_rs)**0.5 * np.sin(sampled_thetas)) * (sampled_rs > Rcirc) + 
+                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5    * (sampled_rs < Rcirc) )
+        else:
+            raise ValueError("AMD must be 'constant', 'r', or 'r_half'")
+        
         #assumes v_theta=0
         sampled_vxs = sampled_vrs * np.sin(sampled_thetas)*np.cos(sampled_phis) - sampled_vphis * np.sin(sampled_phis)
         sampled_vys = sampled_vrs * np.sin(sampled_thetas)*np.sin(sampled_phis) + sampled_vphis * np.cos(sampled_phis)

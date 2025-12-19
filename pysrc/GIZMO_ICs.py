@@ -43,7 +43,7 @@ class ICs:
     init_base_filename = outdir_base+'init.c_base'
     analytic_gravity_base_filename = outdir_base+'analytic_gravity.h_base'
     fn_diskOnly = '../MakeDisk_wHalo_m11_lr/ICs/m11_no_halo_%d%s%s%s%s.ic'
-    outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s_theta%s'
+    outdir_template = outdir_data + 'vc%d_Rs%d_Mdot%d_Rcirc%d%s_res%s_theta%s_AMD%s'
 
     max_step = 0.1                    #lowest resolution of solution in ln(r)
     R_min    = 0.3*un.kpc             #inner radius of supersonic part of solution
@@ -55,7 +55,7 @@ class ICs:
     Z_disk = 1
     
     def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
-                 Rres2Rcool=2, theta_offset=0):
+                 Rres2Rcool=2, theta_offset=0, AMD='constant'):
         if ics!=None: #copy constructor for changing only Rcirc
             self.vc = ics.vc
             self.Rcirc = ics.Rcirc
@@ -69,6 +69,7 @@ class ICs:
             self.fgas_str = ics.fgas_str
             self.Rres2Rcool=ics.Rres2Rcool
             self.theta_offset=theta_offset
+            self.AMD = AMD
         else:                       
             self.vc = vc
             self.Rcirc = Rcirc
@@ -81,6 +82,7 @@ class ICs:
             self.fgas_str = '_fgas' + ('%s'%fgas).replace('.','')
             self.Rres2Rcool = Rres2Rcool
             self.theta_offset=theta_offset
+            self.AMD = AMD
                  
     def calc_CF_solution(self,tol=1e-6,pr=True):
         self.CF_solution = CF.shoot_from_sonic_point(self.potential,
@@ -90,7 +92,7 @@ class ICs:
                                         pr=pr)
     def sample(self):
         return CF.sample(self.CF_solution,self.resolution.to('Msun'),self.Rcirc,self.DiscScale,self.DiscHeight,\
-                         Rres2Rcool=self.Rres2Rcool, theta_offset=self.theta_offset)
+                         Rres2Rcool=self.Rres2Rcool, theta_offset=self.theta_offset, AMD=self.AMD)
     def outdirname(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
@@ -100,7 +102,8 @@ class ICs:
                                     self.Rcirc.value,
                                     self.fgas_str,
                                     res_str,
-                                    str(np.round(np.degrees(self.theta_offset))))
+                                    str(np.round(np.degrees(self.theta_offset))),
+                                    self.AMD)
     def makedisk_filename(self):
         res_str = '%.1g'%self.resolution.value
         res_str = res_str[:2]+res_str[-1:]
