@@ -804,6 +804,7 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         if AMD=='constant':
             sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
                             np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
+        ## The AMDs r_half and r equations are not correct. I should divide by r sin theta - Abandoning for now, but will remove in the future to avoid confusion.
         elif AMD=='r_half':
             # v_phi = 4000 * sin^2(theta) * (r/40)^0.5 / r = 4000 * sin^2(theta) / (40^0.5 * r^0.5)
             sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm**0.5 / sampled_rs) * (sampled_rs > Rcirc) + 
@@ -812,8 +813,31 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
             # v_phi = 4000 * sin^2(theta) * (r/40) / r = 4000 * sin^2(theta) / 40 = 100 * sin^2(theta)
             sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
                             np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
+        elif AMD=='pezzulli17':
+            # Pezzulli et al. (2017) angular momentum profile
+            f_gas_CGM = 0.4  # CGM mass fraction relative halo baryon budget
+            a = -1.5     # density slope
+            j_at_01rvir = 3000.  # kpc km/s - reference specific angular momentum
+            epsilon = 3.5  # shape parameter (2-6 range, exact value has small effect at r<0.8Rvir)
+            r_vir = Rcirc.value/0.08  # kpc - virial radius (typical for MW-mass halo ~10^12 Msun)
+            
+            def j_pezzuli(r_over_Rvir, j_vir, eps, f_gas_CGM, a):
+                """Specific angular momentum profile from Pezzulli+17"""
+                ln_arg = 1 - f_gas_CGM*(1-np.exp(-eps)) - (1-f_gas_CGM)*r_over_Rvir**(a+3)*(1-np.exp(-eps))
+                return -j_vir/eps * np.log(ln_arg)
+            
+            # Find j_vir normalization such that j(0.1*r_vir) = j_at_01rvir
+            j_vir = j_at_01rvir / j_pezzuli(0.1, 1., epsilon, f_gas_CGM, a)
+            
+            # Calculate specific angular momentum at sampled radii
+            r_over_Rvir = (sampled_rs.to('kpc').value) / r_vir
+            sampled_js = j_pezzuli(r_over_Rvir, j_vir, epsilon, f_gas_CGM, a) * un.kpc * un.km / un.s # j in the midplane; theta = pi/2
+            
+            # Convert to azimuthal velocity: v_phi = j(r) (sin theta) / r
+            sampled_vphis = ( (sampled_js*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
+                            np.interp(sampled_rs, self.Rs(), self.vc2())**0.5 * (sampled_rs < Rcirc) )
         else:
-            raise ValueError("AMD must be 'constant', 'r', or 'r_half'")
+            raise ValueError("AMD must be 'constant', 'r', 'r_half', or 'pezzulli17'")
         
         #assumes v_theta=0
         sampled_vxs = sampled_vrs * np.sin(sampled_thetas)*np.cos(sampled_phis) - sampled_vphis * np.sin(sampled_phis)
