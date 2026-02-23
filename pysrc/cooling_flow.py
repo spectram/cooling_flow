@@ -800,44 +800,53 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         sampled_epsilons     = np.interp(sampled_rs, rs, self.internalEnergy())
         
         vcRcirc = np.interp(Rcirc, self.Rs(), self.vc2())**0.5
-        r_norm = sampled_rs.to('kpc').value / 40. # kpc - sort of arbitrary normalization radius
+        # r_norm = sampled_rs.to('kpc').value / 40. # kpc - sort of arbitrary normalization radius
         if AMD=='constant':
             sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
-                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
-        ## The AMDs r_half and r equations are not correct. I should divide by r sin theta - Abandoning for now, but will remove in the future to avoid confusion.
-        elif AMD=='r_half':
-            # v_phi = 4000 * sin^2(theta) * (r/40)^0.5 / r = 4000 * sin^2(theta) / (40^0.5 * r^0.5)
-            sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm**0.5 / sampled_rs) * (sampled_rs > Rcirc) + 
-                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5    * (sampled_rs < Rcirc) )
-        elif AMD=='r':
-            # v_phi = 4000 * sin^2(theta) * (r/40) / r = 4000 * sin^2(theta) / 40 = 100 * sin^2(theta)
-            sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
-                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs < Rcirc) )
+                            np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs <= Rcirc) )
+        ## The AMDs r_half and r equations are incorrect. I should divide by r sin theta - Abandoning for now, but will remove in the future to avoid confusion.
+        # elif AMD=='r_half':
+        #     # v_phi = 4000 * sin^2(theta) * (r/40)^0.5 / r = 4000 * sin^2(theta) / (40^0.5 * r^0.5)
+        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm**0.5 / sampled_rs) * (sampled_rs > Rcirc) + 
+        #                     np.interp(sampled_rs,self.Rs(),self.vc2())**0.5    * (sampled_rs <= Rcirc) )
+        # elif AMD=='r':
+        #     # v_phi = 4000 * sin^2(theta) * (r/40) / r = 4000 * sin^2(theta) / 40 = 100 * sin^2(theta)
+        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
+        #                     np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs <= Rcirc) )
         elif AMD=='pezzulli17':
             # Pezzulli et al. (2017) angular momentum profile
             f_gas_CGM = 0.4  # CGM mass fraction relative halo baryon budget
             a = -1.5     # density slope
             j_at_01rvir = 3000.  # kpc km/s - reference specific angular momentum
-            epsilon = 3.5  # shape parameter (2-6 range, exact value has small effect at r<0.8Rvir)
+            eps = 3.5  # shape parameter (2-6 range, exact value has small effect at r<0.8Rvir)
             r_vir = Rcirc.value/0.08  # kpc - virial radius (typical for MW-mass halo ~10^12 Msun)
             
-            def j_pezzuli(r_over_Rvir, j_vir, eps, f_gas_CGM, a):
-                """Specific angular momentum profile from Pezzulli+17"""
+            def j_pezzulli(r_over_Rvir, j_vir, eps, f_gas_CGM, a):
+                """
+                Specific angular momentum profile from Pezzulli+17
+                Only valid for r<r_vir
+                """
                 ln_arg = 1 - f_gas_CGM*(1-np.exp(-eps)) - (1-f_gas_CGM)*r_over_Rvir**(a+3)*(1-np.exp(-eps))
                 return -j_vir/eps * np.log(ln_arg)
             
             # Find j_vir normalization such that j(0.1*r_vir) = j_at_01rvir
-            j_vir = j_at_01rvir / j_pezzuli(0.1, 1., epsilon, f_gas_CGM, a)
+            j_vir = j_at_01rvir / j_pezzulli(0.1, 1., eps, f_gas_CGM, a)
             
-            # Calculate specific angular momentum at sampled radii
-            r_over_Rvir = (sampled_rs.to('kpc').value) / r_vir
-            sampled_js = j_pezzuli(r_over_Rvir, j_vir, epsilon, f_gas_CGM, a) * un.kpc * un.km / un.s # j in the midplane; theta = pi/2
+            # Initialize v_phi array
+            sampled_vphis = np.zeros(len(sampled_rs)) * un.km / un.s
             
-            # Convert to azimuthal velocity: v_phi = j(r) (sin theta) / r
-            sampled_vphis = ( (sampled_js*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
-                            np.interp(sampled_rs, self.Rs(), self.vc2())**0.5 * (sampled_rs < Rcirc) )
+            # Region 1: Inside Rcirc - use circular velocity
+            inside_rcirc = sampled_rs <= Rcirc
+            sampled_vphis[inside_rcirc] = np.interp(sampled_rs[inside_rcirc], self.Rs(), self.vc2())**0.5
+            
+            # Region 2: Between Rcirc and r_vir - use Pezzulli profile
+            valid_pezzulli = (sampled_rs > Rcirc) & (sampled_rs.to('kpc').value < r_vir)
+            if np.any(valid_pezzulli):
+                r_over_Rvir_valid = (sampled_rs[valid_pezzulli].to('kpc').value) / r_vir
+                sampled_js_valid = j_pezzulli(r_over_Rvir_valid, j_vir, eps, f_gas_CGM, a) * un.kpc * un.km / un.s
+                sampled_vphis[valid_pezzulli] = sampled_js_valid * np.sin(sampled_thetas[valid_pezzulli]) / sampled_rs[valid_pezzulli]
         else:
-            raise ValueError("AMD must be 'constant', 'r', 'r_half', or 'pezzulli17'")
+            raise ValueError("AMD must be 'constant' or 'pezzulli17'")
         
         #assumes v_theta=0
         sampled_vxs = sampled_vrs * np.sin(sampled_thetas)*np.cos(sampled_phis) - sampled_vphis * np.sin(sampled_phis)
@@ -866,8 +875,6 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         Rout = min(2**(0.5)*Rout,Rmax)
         resolution*=3
     return fin_Ms, fin_coords, fin_vs, fin_epsilons
-        
-        
         
         
 class Project:
