@@ -800,24 +800,23 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         sampled_epsilons     = np.interp(sampled_rs, rs, self.internalEnergy())
         
         vcRcirc = np.interp(Rcirc, self.Rs(), self.vc2())**0.5
-        # r_norm = sampled_rs.to('kpc').value / 40. # kpc - sort of arbitrary normalization radius
+        # r_norm = sampled_rs.to('kpc').value / 40. # kpc - arbitrary normalization radius
         if AMD=='constant':
             sampled_vphis = ( (vcRcirc * Rcirc*np.sin(sampled_thetas) / sampled_rs) * (sampled_rs > Rcirc) + 
                             np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs <= Rcirc) )
-        ## The AMDs r_half and r equations are incorrect. I should divide by r sin theta - Abandoning for now, but will remove in the future to avoid confusion.
         # elif AMD=='r_half':
-        #     # v_phi = 4000 * sin^2(theta) * (r/40)^0.5 / r = 4000 * sin^2(theta) / (40^0.5 * r^0.5)
-        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm**0.5 / sampled_rs) * (sampled_rs > Rcirc) + 
+        #     # v_phi = 4000 * sin^2(theta) * (r/40)^0.5 / rsin(theta) = 4000 * sin(theta) / (40^0.5 * r^0.5)
+        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas) * r_norm**0.5 / sampled_rs) * (sampled_rs > Rcirc) + 
         #                     np.interp(sampled_rs,self.Rs(),self.vc2())**0.5    * (sampled_rs <= Rcirc) )
         # elif AMD=='r':
-        #     # v_phi = 4000 * sin^2(theta) * (r/40) / r = 4000 * sin^2(theta) / 40 = 100 * sin^2(theta)
-        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas)**2 * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
+        #     # v_phi = 4000 * sin^2(theta) * (r/40) / rsin(theta) = 4000 * sin(theta) / 40 = 100 * sin(theta)
+        #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas) * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
         #                     np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs <= Rcirc) )
         elif AMD=='pezzulli17':
             # Pezzulli et al. (2017) angular momentum profile
             f_gas_CGM = 0.4  # CGM mass fraction relative halo baryon budget
             a = -1.5     # density slope
-            j_at_01rvir = 3000.  # kpc km/s - reference specific angular momentum
+            j_at_01rvir = 4000.  # kpc km/s - reference specific angular momentum
             eps = 3.5  # shape parameter (2-6 range, exact value has small effect at r<0.8Rvir)
             r_vir = Rcirc.value/0.08  # kpc - virial radius (typical for MW-mass halo ~10^12 Msun)
             
