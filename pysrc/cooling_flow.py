@@ -745,7 +745,7 @@ def fibonacci_sphere(samples=1000):
 
     return phi, theta
 
-def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function = None, 
+def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=4.,theta_function = None, 
            theta_offset=0., rotaxis='y', AMD='constant'):
     """sample solution in order to create initial conditions for particle hydro simulation
     Accepts:
@@ -766,7 +766,7 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
     rs = self.Rs()
     Rin, Rout = 0*un.kpc, self.Rcool(10*un.Gyr)*Rres2Rcool        
     Rmax = np.interp(20, (self.Rs() / self.cs()).to('Gyr').value,self.Rs().value)*un.kpc
-    print(" %dr(t_cool=10Gyr) = %.0f kpc, r(t_sc=20Gyr) = %.0f kpc"%(Rres2Rcool,Rout.value, Rmax.value))
+    print("%d; r(t_cool=10Gyr) = %.0f kpc, r(t_sc=20Gyr) = %.0f kpc"%(Rres2Rcool,Rout.value, Rmax.value))
     if theta_function==None: theta_function = lambda theta: np.sin(theta)
     while Rin<Rmax:            
         Min = np.interp(Rin,rs, Mgass)
@@ -813,8 +813,8 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
         #     sampled_vphis = ( (vcRcirc * Rcirc * np.sin(sampled_thetas) * r_norm / sampled_rs) * (sampled_rs > Rcirc) + 
         #                     np.interp(sampled_rs,self.Rs(),self.vc2())**0.5      * (sampled_rs <= Rcirc) )
         elif AMD=='pezzulli17':
-            # Pezzulli et al. (2017) angular momentum profile
-            f_gas_CGM = 0.4  # CGM mass fraction relative halo baryon budget
+            # Pezzulli et al. (2017) angular momentum profile; 1-f_gas_cgm instead of f_cgm
+            f_gas_CGM = 0.7  # 1 - CGM mass fraction relative halo baryon budget
             a = -1.5     # density slope
             j_at_01rvir = 4000.  # kpc km/s - reference specific angular momentum
             eps = 3.5  # shape parameter (2-6 range, exact value has small effect at r<0.8Rvir)
@@ -834,12 +834,13 @@ def sample(self,resolution,Rcirc,avoid_Rs,avoid_zs,Rres2Rcool=1.,theta_function 
             # Initialize v_phi array
             sampled_vphis = np.zeros(len(sampled_rs)) * un.km / un.s
             
-            # Region 1: Inside Rcirc - use circular velocity
-            inside_rcirc = sampled_rs <= Rcirc
-            sampled_vphis[inside_rcirc] = np.interp(sampled_rs[inside_rcirc], self.Rs(), self.vc2())**0.5
+            # Region 1: Inside 4R_d - use circular velocity
+            # hard coding 4R_d as Rcirc/2 for now ughhhh
+            inside_4rd = sampled_rs <= Rcirc/2
+            sampled_vphis[inside_4rd] = np.interp(sampled_rs[inside_4rd], self.Rs(), self.vc2())**0.5
             
-            # Region 2: Between Rcirc and r_vir - use Pezzulli profile
-            valid_pezzulli = (sampled_rs > Rcirc) & (sampled_rs.to('kpc').value < r_vir)
+            # Region 2: Between 4R_d and r_vir - use Pezzulli profile
+            valid_pezzulli = (sampled_rs > Rcirc/2) & (sampled_rs.to('kpc').value < r_vir)
             if np.any(valid_pezzulli):
                 r_over_Rvir_valid = (sampled_rs[valid_pezzulli].to('kpc').value) / r_vir
                 sampled_js_valid = j_pezzulli(r_over_Rvir_valid, j_vir, eps, f_gas_CGM, a) * un.kpc * un.km / un.s

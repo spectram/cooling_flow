@@ -55,7 +55,7 @@ class ICs:
     Z_disk = 1
     
     def __init__(self,vc=None,Rcirc=None,Rsonic=None,Z_CGM=None,smallGalaxy=False,resolution = 8e4*un.Msun,ics=None,fgas=None,m=0,Rvc=200*un.kpc,
-                 Rres2Rcool=2, theta_offset=0, AMD='constant'):
+                 Rres2Rcool=4, theta_offset=0, AMD='constant'):
         if ics!=None: #copy constructor for changing only Rcirc
             self.vc = ics.vc
             self.Rcirc = ics.Rcirc
